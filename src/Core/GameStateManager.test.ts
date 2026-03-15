@@ -26,7 +26,7 @@ class TestGameState implements GameState {
         this._isExitCalled = true;
     }
 
-    Run(): void {
+    async Run(): Promise<void> {
         this._isRunCalled = true;
     }
 }
@@ -40,7 +40,7 @@ class TestGameStateManager extends GameStateManager {
 const STATE_START: string = 'START';
 const STATE_END: string = 'END';
 
-test('Exit for current state is called when switching states', () => {
+test('Exit for current state is called when switching states', async () => {
     const gs1 = new TestGameState();
     const gs2 = new TestGameState();
     const gsm = new TestGameStateManager();
@@ -48,13 +48,13 @@ test('Exit for current state is called when switching states', () => {
     gsm.Add(STATE_START, gs1, [STATE_END]);
     gsm.Add(STATE_END, gs2, []);
 
-    gsm.Switch(STATE_START);
+    await gsm.Switch(STATE_START);
     expect(gs1.isExitCalled).toBe(false);
-    gsm.Switch(STATE_END);
+    await gsm.Switch(STATE_END);
     expect(gs1.isExitCalled).toBe(true);
 });
 
-test('Enter for next state is called when switching states', () => {
+test('Enter for next state is called when switching states', async () => {
     const gs1 = new TestGameState();
     const gs2 = new TestGameState();
     const gsm = new TestGameStateManager();
@@ -62,13 +62,13 @@ test('Enter for next state is called when switching states', () => {
     gsm.Add(STATE_START, gs1, [STATE_END]);
     gsm.Add(STATE_END, gs2, []);
 
-    gsm.Switch(STATE_START);
+    await gsm.Switch(STATE_START);
     expect(gs2.isEnterCalled).toBe(false);
-    gsm.Switch(STATE_END);
+    await gsm.Switch(STATE_END);
     expect(gs2.isEnterCalled).toBe(true);
 });
 
-test('Run for switched state is called', () => {
+test('Run for switched state is called', async () => {
     const gs1 = new TestGameState();
     const gs2 = new TestGameState();
     const gsm = new TestGameStateManager();
@@ -77,11 +77,11 @@ test('Run for switched state is called', () => {
     gsm.Add(STATE_END, gs2, []);
 
     expect(gs1.isRunCalled).toBe(false);
-    gsm.Switch(STATE_START);
+    await gsm.Switch(STATE_START);
     expect(gs1.isRunCalled).toBe(true);
 });
 
-test('Next state is set correctly after switching states', () => {
+test('Next state is set correctly after switching states', async () => {
     const gs1 = new TestGameState();
     const gs2 = new TestGameState();
     const gsm = new TestGameStateManager();
@@ -89,28 +89,28 @@ test('Next state is set correctly after switching states', () => {
     gsm.Add(STATE_START, gs1, [STATE_END]);
     gsm.Add(STATE_END, gs2, []);
 
-    gsm.Switch(STATE_START);
+    await gsm.Switch(STATE_START);
     expect(gsm.CurrentGameState).toBe(gs1);
 });
 
-test('Switching to undefined state is not possible', () => {
+test('Switching to undefined state is not possible', async () => {
     const gs = new TestGameState();
     const gsm = new TestGameStateManager();
 
     gsm.Add(STATE_START, gs, [STATE_END]);
 
-    const success = gsm.Switch(STATE_END);
+    const success = await gsm.Switch(STATE_END);
     expect(success).toBe(false);
 });
 
-test('Switching to unadded state is not possible', () => {
+test('Switching to unadded state is not possible', async () => {
     const gsm = new TestGameStateManager();
 
-    const success = gsm.Switch(STATE_START);
+    const success = await gsm.Switch(STATE_START);
     expect(success).toBe(false);
 });
 
-test('Switching to unconfigured next state is not possible', () => {
+test('Switching to unconfigured next state is not possible', async () => {
     const gs1 = new TestGameState();
     const gs2 = new TestGameState();
     const gsm = new TestGameStateManager();
@@ -118,8 +118,8 @@ test('Switching to unconfigured next state is not possible', () => {
     gsm.Add(STATE_START, gs1, []);
     gsm.Add(STATE_END, gs2, []);
 
-    let result = gsm.Switch(STATE_START);
+    let result = await gsm.Switch(STATE_START);
     expect(result).toBe(true);
-    result = gsm.Switch(STATE_END);
+    result = await gsm.Switch(STATE_END);
     expect(result).toBe(false);
 });

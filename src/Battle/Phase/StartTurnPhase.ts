@@ -18,14 +18,21 @@ export class StartTurnPhase implements GameState {
         Logger.info('StartTurnPhase Exit');
     }
 
-    Run(): void {
+    async Run(): Promise<void> {
         Logger.info('StartTurnPhase Run');
+
+        const currentActor = this._battle.actorManager.currentActor;
+        Logger.info(
+            `Turn starting for entity ${currentActor.entityId} (player ${currentActor.playerIndex}).`
+        );
 
         this._battle.dispatchEvent<TurnStartedTrigger>(
             TurnStartedTrigger.type,
             {
-                originEntityId: this._battle.currentPlayer
+                originEntityId: currentActor.entityId
             }
         );
+
+        await this._battle.switchPhase(Battle.PHASE_TURN_PLAY);
     }
 }

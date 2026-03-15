@@ -17,7 +17,9 @@ export class EndTurnPhase implements GameState {
         Logger.info('EndTurnPhase Exit');
     }
 
-    Run(): void {
+    async Run(): Promise<void> {
         Logger.info('EndTurnPhase Run');
+
+        await this._battle.switchPhase(Battle.PHASE_TURN_START);
     }
 }

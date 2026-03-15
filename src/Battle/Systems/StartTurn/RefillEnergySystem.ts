@@ -13,14 +13,20 @@ export class RefillEnergySystem extends TriggerSystem {
         const energyComponents =
             this._ecs.getComponents<EnergyComponent>(EnergyComponent);
 
-        energyComponents.some((component) => {
+        const found = energyComponents.some((component) => {
             if (component.entityId == playerEntityId) {
                 component.energy = component.maxEnergy;
                 Logger.info(
-                    `Refilled energy for player ${playerEntityId} to ${component.energy}`
+                    `Refilled energy for entity ${playerEntityId} to ${component.energy}/${component.maxEnergy}.`
                 );
                 return true;
             }
         });
+
+        if (!found) {
+            Logger.info(
+                `Entity ${playerEntityId} has no EnergyComponent — skipping energy refill.`
+            );
+        }
     }
 }

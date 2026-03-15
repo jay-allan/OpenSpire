@@ -25,7 +25,7 @@ export class GameStateManager {
         return this;
     }
 
-    public Switch(newStateName: string): boolean {
+    public async Switch(newStateName: string): Promise<boolean> {
         if (!this._gameStates.has(newStateName)) {
             Logger.info('Game state %s is unknown', newStateName);
             return false;
@@ -34,7 +34,7 @@ export class GameStateManager {
         const newStateEntry: GameStateEntry =
             this._gameStates.get(newStateName)!;
         if (this._currentState == undefined) {
-            this.SetState(newStateName, newStateEntry.state);
+            await this.SetState(newStateName, newStateEntry.state);
             return true;
         }
 
@@ -42,18 +42,21 @@ export class GameStateManager {
             this._currentStateName
         )!;
         if (currentStateEntry.nextStateNames.includes(newStateName)) {
-            this.SetState(newStateName, newStateEntry.state);
+            await this.SetState(newStateName, newStateEntry.state);
             return true;
         }
 
         return false;
     }
 
-    public Run(): void {
-        this._currentState?.Run();
+    public async Run(): Promise<void> {
+        await this._currentState?.Run();
     }
 
-    private SetState(newStateName: string, newState: GameState): void {
+    private async SetState(
+        newStateName: string,
+        newState: GameState
+    ): Promise<void> {
         if (this._currentState != undefined) {
             this._currentState.Exit();
         }
@@ -62,6 +65,6 @@ export class GameStateManager {
         this._currentState = newState;
         this._currentStateName = newStateName;
 
-        newState.Run();
+        await newState.Run();
     }
 }

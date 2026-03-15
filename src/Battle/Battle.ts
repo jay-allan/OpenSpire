@@ -8,9 +8,21 @@ import { StartTurnPhase } from './Phase/StartTurnPhase';
 
 import { EventBus } from '../Core/EventBus';
 import { ECS } from '../Core/ECS/ECS';
-import { Entity } from '../Core/ECS/Entity';
 import { EnergyComponent } from './Components/Player/EnergyComponent';
+import { HealthComponent } from './Components/Actor/HealthComponent';
 import { RefillEnergySystem } from './Systems/StartTurn/RefillEnergySystem';
+import { DamageActorSystem } from './Systems/PlayTurn/DamageActorSystem';
+import { ReduceEnergySystem } from './Systems/PlayTurn/ReduceEnergySystem';
+import { CheckRemainingEnergySystem } from './Systems/PlayTurn/CheckRemainingEnergySystem';
+import { RemoveDeadActorSystem } from './Systems/EndTurn/RemoveDeadActorSystem';
+import { CheckBattleEndSystem } from './Systems/EndTurn/CheckBattleEndSystem';
+import { AdvanceActorSystem } from './Systems/EndTurn/AdvanceActorSystem';
+import { PlayerTurnSwitchSystem } from './Systems/EndTurn/PlayerTurnSwitchSystem';
+import { ActorManager } from './ActorModel';
+import { HumanActor } from './Actor/HumanActor';
+import { BattleDisplay } from './Display/BattleDisplay';
+import { BattleEndDisplay } from './Display/BattleEndDisplay';
+import { ComputerActor } from './Actor/ComputerActor';
 
 export class Battle {
     public static readonly PHASE_BATTLE_START: string = 'PHASE_BATTLE_START';
@@ -22,35 +34,115 @@ export class Battle {
     protected readonly _stateManager: GameStateManager = new GameStateManager();
     protected readonly _eventBus: EventBus = new EventBus();
     protected readonly _ecs: ECS = new ECS(this._eventBus);
-    protected readonly _players: Array<Entity> = new Array<Entity>();
-
-    protected _currentPlayer = 0;
+    protected readonly _actorManager: ActorManager = new ActorManager();
 
     public constructor() {
         this.initEntityComponentSystem();
+        new BattleEndDisplay(0, this._eventBus);
         this.initGameStateManager();
     }
 
-    public get currentPlayer(): number {
-        return this._currentPlayer;
+    public get ecs(): ECS {
+        return this._ecs;
+    }
+
+    public get actorManager(): ActorManager {
+        return this._actorManager;
+    }
+
+    /**
+     * Returns true when at least one player side has no remaining actors.
+     * Computed directly from ActorManager state — no separate flag needed.
+     */
+    public get isBattleOver(): boolean {
+        for (let i = 0; i < this._actorManager.playerCount; i++) {
+            if (!this._actorManager.hasLivingActors(i)) return true;
+        }
+        return false;
     }
 
     public dispatchEvent<T>(event: string, payload?: any) {
         this._eventBus.dispatch<T>(event, payload);
     }
 
-    public switchPhase(phase: string): void {
-        this._stateManager.Switch(phase);
+    public async switchPhase(phase: string): Promise<void> {
+        await this._stateManager.Switch(phase);
+    }
+
+    public async start(): Promise<void> {
+        await this._stateManager.Switch(Battle.PHASE_BATTLE_START);
     }
 
     protected initEntityComponentSystem(): void {
-        const player = this._ecs.createEntity();
-        this._ecs.createComponent<EnergyComponent>(player, EnergyComponent);
-        this._currentPlayer = player.id;
+        this.createSystems();
+        this.createPlayer(0);
+        this.createEnemy(1);
+    }
 
-        this._players.push(player);
-
+    protected createSystems(): void {
         this._ecs.createSystem(RefillEnergySystem);
+        this._ecs.createSystem(DamageActorSystem);
+        this._ecs.createSystem(ReduceEnergySystem);
+        this._ecs.createSystem(CheckRemainingEnergySystem);
+
+        const removeDeadActor = this._ecs.createSystem(RemoveDeadActorSystem);
+        removeDeadActor.setActorManager(this._actorManager);
+
+        const checkBattleEnd = this._ecs.createSystem(CheckBattleEndSystem);
+        checkBattleEnd.setActorManager(this._actorManager);
+
+        const advanceActor = this._ecs.createSystem(AdvanceActorSystem);
+        advanceActor.setActorManager(this._actorManager);
+
+        const playerTurnSwitch = this._ecs.createSystem(PlayerTurnSwitchSystem);
+        playerTurnSwitch.setActorManager(this._actorManager);
+    }
+
+    protected createPlayer(playerIndex: number): void {
+        const player = this._ecs.createEntity();
+        const playerHealth = this._ecs.createComponent<HealthComponent>(
+            player,
+            HealthComponent
+        );
+        if (playerHealth) {
+            playerHealth.health = 50;
+            playerHealth.maxHealth = 50;
+        }
+        const playerEnergy = this._ecs.createComponent<EnergyComponent>(
+            player,
+            EnergyComponent
+        );
+        if (playerEnergy) {
+            playerEnergy.energy = 3;
+            playerEnergy.maxEnergy = 3;
+        }
+        this._actorManager.addActor(
+            playerIndex,
+            new HumanActor(player.id, playerIndex)
+        );
+        new BattleDisplay(
+            player.id,
+            playerIndex,
+            this._actorManager,
+            this._ecs,
+            this._eventBus
+        );
+    }
+
+    protected createEnemy(enemyIndex: number): void {
+        const enemy = this._ecs.createEntity();
+        const enemyHealth = this._ecs.createComponent<HealthComponent>(
+            enemy,
+            HealthComponent
+        );
+        if (enemyHealth) {
+            enemyHealth.health = 30;
+            enemyHealth.maxHealth = 30;
+        }
+        this._actorManager.addActor(
+            enemyIndex,
+            new ComputerActor(enemy.id, enemyIndex)
+        );
     }
 
     protected initGameStateManager(): void {
@@ -62,14 +154,13 @@ export class Battle {
                 Battle.PHASE_TURN_PLAY
             ])
             .Add(Battle.PHASE_TURN_PLAY, new PlayTurnPhase(this), [
-                Battle.PHASE_TURN_END
+                Battle.PHASE_TURN_END,
+                Battle.PHASE_BATTLE_END
             ])
             .Add(Battle.PHASE_TURN_END, new EndTurnPhase(this), [
                 Battle.PHASE_TURN_START,
                 Battle.PHASE_BATTLE_END
             ])
-            .Add(Battle.PHASE_BATTLE_END, new EndBattlePhase(this), []);
-
-        this._stateManager.Switch(Battle.PHASE_BATTLE_START);
+            .Add(Battle.PHASE_BATTLE_END, new EndBattlePhase(), []);
     }
 }

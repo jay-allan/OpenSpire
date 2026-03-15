@@ -17,9 +17,9 @@ export class StartBattlePhase implements GameState {
         Logger.info('StartBattlePhase Exit');
     }
 
-    Run(): void {
+    async Run(): Promise<void> {
         Logger.info('StartBattlePhase Run');
 
-        this._battle.switchPhase(Battle.PHASE_TURN_START);
+        await this._battle.switchPhase(Battle.PHASE_TURN_START);
     }
 }

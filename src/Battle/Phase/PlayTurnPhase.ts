@@ -14,10 +14,23 @@ export class PlayTurnPhase implements GameState {
     }
 
     Exit(): void {
-        Logger.info('StartTurnPhase Exit');
+        Logger.info('PlayTurnPhase Exit');
     }
 
-    Run(): void {
-        Logger.info('StartTurnPhase Run');
+    async Run(): Promise<void> {
+        Logger.info('PlayTurnPhase Run');
+
+        const actor = this._battle.actorManager.currentActor;
+        Logger.info(
+            `Playing turn for entity ${actor.entityId} (player ${actor.playerIndex}).`
+        );
+        await actor.playTurn(this._battle);
+
+        if (this._battle.isBattleOver) {
+            Logger.info('Battle is over — switching to PHASE_BATTLE_END.');
+            await this._battle.switchPhase(Battle.PHASE_BATTLE_END);
+        } else {
+            await this._battle.switchPhase(Battle.PHASE_TURN_END);
+        }
     }
 }
