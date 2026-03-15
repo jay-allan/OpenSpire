@@ -28,27 +28,29 @@ class TestTriggerSystem extends TriggerSystem {
     }
 }
 
+let ecs: ECS;
+
 beforeEach(() => {
-    ECS.getInstance().initialize();
+    ecs = new ECS();
 });
 
 afterEach(() => {
-    ECS.getInstance().destroy();
+    ecs.destroy();
 });
 
 test('TriggerSystem registers at EventBus', () => {
     const testTriggerSystem =
-        ECS.getInstance().createSystem<TestTriggerSystem>(TestTriggerSystem);
+        ecs.createSystem<TestTriggerSystem>(TestTriggerSystem);
     expect(testTriggerSystem.isRunCalled).toBe(false);
-    ECS.getInstance().eventBus.dispatch<TestTrigger>(TestTrigger.type);
+    ecs.eventBus.dispatch<TestTrigger>(TestTrigger.type);
     expect(testTriggerSystem.isRunCalled).toBe(true);
 });
 
 test('TriggerSystem receives payload', () => {
     const PAYLOAD_VALUE: number = 10;
     const testTriggerSystem =
-        ECS.getInstance().createSystem<TestTriggerSystem>(TestTriggerSystem);
-    ECS.getInstance().eventBus.dispatch<TestTrigger>(TestTrigger.type, {
+        ecs.createSystem<TestTriggerSystem>(TestTriggerSystem);
+    ecs.eventBus.dispatch<TestTrigger>(TestTrigger.type, {
         originEntityId: ENTITY_INVALID,
         value: PAYLOAD_VALUE
     });

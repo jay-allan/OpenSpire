@@ -1,14 +1,14 @@
 import { Component } from './Component';
 import { ECS } from './ECS';
 
-const ecs = ECS.getInstance();
+let ecs: ECS;
 
 class TestComponent extends Component {
     readonly type: string = 'TestComponent';
 }
 
 beforeEach(() => {
-    ecs.initialize();
+    ecs = new ECS();
 });
 
 afterEach(() => {
@@ -23,17 +23,15 @@ test('Entity ID increments with each entity created', () => {
 
 test('Entity components are added', () => {
     const e = ecs.createEntity();
-    expect(e.components.size).toBe(0);
     const c = ecs.createComponent(e, TestComponent);
-    expect(e.components.values()).toContain(c);
-    expect(e.components.size).toBe(1);
+    expect(c).toBeDefined();
+    expect(ecs.getEntityComponent(e.id, TestComponent)).toBe(c);
 });
 
-test('Same component cannot be added to Entity multipled times', () => {
+test('Same component cannot be added to Entity multiple times', () => {
     const e = ecs.createEntity();
-    expect(e.components.size).toBe(0);
-    ecs.createComponent(e, TestComponent);
+    const c1 = ecs.createComponent(e, TestComponent);
     const c2 = ecs.createComponent(e, TestComponent);
     expect(c2).toBeUndefined();
-    expect(e.components.size).toBe(1);
+    expect(ecs.getEntityComponent(e.id, TestComponent)).toBe(c1);
 });

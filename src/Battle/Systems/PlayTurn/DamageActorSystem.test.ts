@@ -10,10 +10,10 @@ import {
     DamageCalculationResult
 } from './DamageActorSystem';
 
-const ecs = ECS.getInstance();
+let ecs: ECS;
 
 beforeEach(() => {
-    ecs.initialize(new EventBus());
+    ecs = new ECS(new EventBus());
 });
 
 afterEach(() => {
@@ -111,7 +111,7 @@ test('Dispatches ActorDiesEvent if entity dies from received damage', () => {
         HealthComponent
     );
     if (!healthComponent) {
-        fail('Unable to create component');
+        fail();
     }
     healthComponent.health = INITIAL_HEALTH;
     healthComponent.maxHealth = INITIAL_HEALTH;

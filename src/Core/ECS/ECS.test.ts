@@ -3,7 +3,7 @@ import { ECS } from './ECS';
 import { Trigger } from './Trigger';
 import { TriggerSystem } from './TriggerSystem';
 
-const ecs = ECS.getInstance();
+let ecs: ECS;
 
 const INITIAL_HEALTH: number = 100;
 const DAMAGE: number = 10;
@@ -32,7 +32,7 @@ class DamageAllSystem extends TriggerSystem {
     public Run(payload?: any): void {
         let data = payload as DamageAllTrigger;
         let healthComponents =
-            ECS.getInstance().getComponents<HealthComponent>(HealthComponent);
+            this._ecs.getComponents<HealthComponent>(HealthComponent);
 
         healthComponents.forEach((component) => {
             if (component.entityId != data.originEntityId) {
@@ -43,7 +43,7 @@ class DamageAllSystem extends TriggerSystem {
 }
 
 beforeEach(() => {
-    ecs.initialize();
+    ecs = new ECS();
 });
 
 afterEach(() => {

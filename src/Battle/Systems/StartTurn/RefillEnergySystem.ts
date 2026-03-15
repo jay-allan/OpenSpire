@@ -1,4 +1,3 @@
-import { ECS } from '../../../Core/ECS/ECS';
 import { TriggerSystem } from '../../../Core/ECS/TriggerSystem';
 import { Logger } from '../../../Core/Logger';
 import { EnergyComponent } from '../../Components/Player/EnergyComponent';
@@ -12,7 +11,7 @@ export class RefillEnergySystem extends TriggerSystem {
 
         const playerEntityId = (payload as TurnStartedTrigger).originEntityId;
         const energyComponents =
-            ECS.getInstance().getComponents<EnergyComponent>(EnergyComponent);
+            this._ecs.getComponents<EnergyComponent>(EnergyComponent);
 
         energyComponents.some((component) => {
             if (component.entityId == playerEntityId) {

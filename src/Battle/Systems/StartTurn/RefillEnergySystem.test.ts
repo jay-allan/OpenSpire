@@ -3,10 +3,10 @@ import { EnergyComponent } from '../../Components/Player/EnergyComponent';
 import { TurnStartedTrigger } from '../../Triggers/Phases/TurnStartedTrigger';
 import { RefillEnergySystem } from './RefillEnergySystem';
 
-const ecs = ECS.getInstance();
+let ecs: ECS;
 
 beforeEach(() => {
-    ecs.initialize();
+    ecs = new ECS();
 });
 
 afterEach(() => {

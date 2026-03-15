@@ -1,5 +1,6 @@
 import { Entity } from './Entity';
 import { Component } from './Component';
+import { ComponentManager } from './ComponentManager';
 import { EventBus } from '../EventBus';
 import { System } from './System';
 import { Logger } from '../Logger';
@@ -37,111 +38,95 @@ import { Logger } from '../Logger';
  * https://medium.com/ingeniouslysimple/entities-components-and-systems-89c31464240d
  */
 export class ECS {
-    private static instance: ECS;
-
-    private _eventBus: EventBus = new EventBus();
+    private _eventBus: EventBus;
     private _entities: Map<number, Entity> = new Map<number, Entity>();
-    private _components: Map<string, Array<Component>> = new Map<
-        string,
-        Array<Component>
-    >();
+    private _componentManager: ComponentManager = new ComponentManager();
     private _systems: Array<System> = new Array<System>();
     private _nextEntityId = 0;
 
-    public initialize(eventBus?: EventBus): void {
-        if (eventBus) {
-            this._eventBus = eventBus;
-        }
+    /**
+     * @param eventBus Optional EventBus to use for dispatching triggers.
+     *                 If omitted, a new EventBus is created internally.
+     */
+    public constructor(eventBus?: EventBus) {
+        this._eventBus = eventBus ?? new EventBus();
     }
 
-    public static getInstance(): ECS {
-        if (!ECS.instance) {
-            ECS.instance = new ECS();
-        }
-
-        return ECS.instance;
-    }
-
+    /**
+     * The EventBus used to dispatch and receive triggers between systems.
+     */
     public get eventBus(): EventBus {
         return this._eventBus;
     }
 
+    /**
+     * Creates a new entity with a unique ID and registers it with the ECS.
+     *
+     * @returns The newly created Entity
+     */
     public createEntity(): Entity {
-        const entity: Entity = {
-            id: this._nextEntityId++,
-            components: new Map<string, Component>()
-        };
+        const entity: Entity = new Entity();
+        entity.id = this._nextEntityId++;
         this._entities.set(entity.id, entity);
 
         return entity;
     }
 
+    /**
+     * Returns the entity with the given ID, or undefined if no such entity exists.
+     *
+     * @param entityId ID of the entity to look up
+     */
     public getEntity(entityId: number): Entity | undefined {
         return this._entities.get(entityId);
     }
 
+    /**
+     * Creates a new component of the given type and attaches it to the entity.
+     * Each entity may only have one component of any given type.
+     *
+     * @param entity Entity to attach the component to
+     * @param type Constructor of the component type to create
+     * @returns The new component, or undefined if the entity already has a
+     *          component of this type
+     */
     public createComponent<T extends Component>(
         entity: Entity,
         type: new () => T
     ): T | undefined {
-        const component: T = new type();
+        const component = this._componentManager.add<T>(entity.id, new type());
 
-        if (entity.components.has(component.type)) {
+        if (!component) {
             Logger.warn(
-                `Entity ID ${entity.id} already has component ${component.type}`
+                `Entity ID ${entity.id} already has component of this type`
             );
-            return undefined;
         }
-
-        component.entityId = entity.id;
-        entity.components.set(component.type, component);
-
-        let components: Array<Component>;
-        if (!this._components.has(component.type)) {
-            components = new Array<Component>();
-            this._components.set(component.type, components);
-        } else {
-            components = this._components.get(component.type)!;
-        }
-        components.push(component);
 
         return component;
     }
 
     /**
-     * Returns _all_ existing components (across entity boundaries) of type T
+     * Returns _all_ existing components (across entity boundaries) of type T.
      *
      * @param type Component type
      * @returns All components of given type
      */
     public getComponents<T extends Component>(type: new () => T): Array<T> {
-        const component: T = new type();
-
-        return this._components.get(component.type) as Array<T>;
+        return this._componentManager.getAll<T>(type);
     }
 
     /**
-     * Returns Component with type from an Entity.
+     * Returns the component of type T belonging to the given entity,
+     * or undefined if the entity does not have such a component.
      *
-     * @param entityId Entity to retrieve component type from
-     * @param type Type of componentn to retrieve from Entity
-     * @returns Entity component of type T, undefined if component of given type does not exist
+     * @param entityId Entity to retrieve the component from
+     * @param type Type of component to retrieve
      */
-    // TS does not allow instanceof check for T: https://github.com/Microsoft/TypeScript/issues/5236
-    //public getEntityComponent<T extends Component>(entityId: number, constructor: {new (): T}): T | undefined {
     public getEntityComponent<T extends Component>(
         entityId: number,
         type: new () => T
     ): T | undefined {
-        let component: T | undefined = undefined;
-
-        const entity = this.getEntity(entityId);
-        if (entity) {
-            const componentType = new type();
-            component = entity.components.get(componentType.type) as T;
-        }
-
-        return component;
+        return this._componentManager.get<T>(entityId, type);
     }
 
     /**
@@ -154,7 +139,7 @@ export class ECS {
     public createSystem<T extends System>(type: new () => T): T {
         const system: T = new type();
 
-        system.Initialize();
+        system.Initialize(this);
         this._systems.push(system);
 
         return system;
@@ -166,8 +151,7 @@ export class ECS {
      */
     public destroy(): void {
         this._entities.clear();
-
-        this._components.clear();
+        this._componentManager.clear();
 
         this._systems.forEach((system) => {
             system.Destroy();

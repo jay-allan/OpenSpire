@@ -21,6 +21,7 @@ export class Battle {
 
     protected readonly _stateManager: GameStateManager = new GameStateManager();
     protected readonly _eventBus: EventBus = new EventBus();
+    protected readonly _ecs: ECS = new ECS(this._eventBus);
     protected readonly _players: Array<Entity> = new Array<Entity>();
 
     protected _currentPlayer = 0;
@@ -43,16 +44,13 @@ export class Battle {
     }
 
     protected initEntityComponentSystem(): void {
-        const ecs = ECS.getInstance();
-        ecs.initialize(this._eventBus);
-
-        const player = ecs.createEntity();
-        ecs.createComponent<EnergyComponent>(player, EnergyComponent);
+        const player = this._ecs.createEntity();
+        this._ecs.createComponent<EnergyComponent>(player, EnergyComponent);
         this._currentPlayer = player.id;
 
         this._players.push(player);
 
-        ecs.createSystem(RefillEnergySystem);
+        this._ecs.createSystem(RefillEnergySystem);
     }
 
     protected initGameStateManager(): void {

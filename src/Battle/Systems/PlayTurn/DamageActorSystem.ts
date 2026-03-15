@@ -1,4 +1,3 @@
-import { ECS } from '../../../Core/ECS/ECS';
 import { Entity } from '../../../Core/ECS/Entity';
 import { TriggerSystem } from '../../../Core/ECS/TriggerSystem';
 import { Logger } from '../../../Core/Logger';
@@ -21,10 +20,9 @@ export class DamageActorSystem extends TriggerSystem {
     public Run(payload?: any): void {
         Logger.info('DamageActorSystem triggered');
 
-        const ecs: ECS = ECS.getInstance();
         const data = payload as DamageActorAction;
 
-        const targetEntity: Entity | undefined = ECS.getInstance().getEntity(
+        const targetEntity: Entity | undefined = this._ecs.getEntity(
             data.targetEntityId
         );
         if (!targetEntity) {
@@ -33,7 +31,7 @@ export class DamageActorSystem extends TriggerSystem {
         }
 
         const healthComponent: HealthComponent | undefined =
-            ecs.getEntityComponent<HealthComponent>(
+            this._ecs.getEntityComponent<HealthComponent>(
                 targetEntity.id,
                 HealthComponent
             );
@@ -44,7 +42,7 @@ export class DamageActorSystem extends TriggerSystem {
         const healthAmount = healthComponent.health;
 
         const blockComponent: BlockComponent | undefined =
-            ecs.getEntityComponent<BlockComponent>(
+            this._ecs.getEntityComponent<BlockComponent>(
                 targetEntity.id,
                 BlockComponent
             );
@@ -60,7 +58,7 @@ export class DamageActorSystem extends TriggerSystem {
             blockComponent.block = damageResult.remainingBlock;
         }
 
-        ecs.eventBus.dispatch<ActorDamagedEvent>(ActorDamagedEvent.type, {
+        this._ecs.eventBus.dispatch<ActorDamagedEvent>(ActorDamagedEvent.type, {
             originEntityId: data.originEntityId,
             targetEntityId: data.targetEntityId,
             damageToBlock: damageResult.damageToBlock,
@@ -75,7 +73,7 @@ export class DamageActorSystem extends TriggerSystem {
                 `Dispatching die event for entity ${data.targetEntityId}`
             );
 
-            ecs.eventBus.dispatch<ActorDiesEvent>(ActorDiesEvent.type, {
+            this._ecs.eventBus.dispatch<ActorDiesEvent>(ActorDiesEvent.type, {
                 originEntityId: data.originEntityId,
                 targetEntityId: data.targetEntityId
             });
